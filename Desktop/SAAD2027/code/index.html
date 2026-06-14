@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Les Élites — Espace Scolaire</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <style>
+    :root {
+      --navy: #1B2A4A;
+      --navy-mid: #243460;
+      --navy-deep: #101d35;
+      --gold: #C9A84C;
+      --gold-light: #E8C96A;
+      --gold-pale: #FBF3DC;
+      --white: #FFFFFF;
+      --bg: #F0F2F5;
+      --text: #1e2d40;
+      --text-mid: #5a6a80;
+      --text-light: #9aaab8;
+      --border: #e2e8f0;
+      --shadow-sm: 0 2px 8px rgba(27,42,74,0.08);
+      --shadow: 0 4px 20px rgba(27,42,74,0.12);
+      --shadow-lg: 0 8px 32px rgba(27,42,74,0.18);
+      --r: 14px;
+      --r-sm: 8px;
+    }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: "DM Sans", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+    /* SCREENS */
+    .screen { display: none !important; min-height: 100vh; }
+    .screen.active { display: block !important; }
+    #login-screen.active { display: flex !important; }
+
+    /* ===== LOGIN ===== */
+    #login-screen {
+      background: linear-gradient(160deg, var(--navy-deep) 0%, var(--navy) 45%, var(--navy-mid) 100%);
+      flex-direction: column; align-items: center; justify-content: center;
+      padding: 24px; position: relative; overflow: hidden;
+    }
+    .bg-orb { position: absolute; border-radius: 50%; background: radial-gradient(circle, rgba(201,168,76,0.12) 0%, transparent 70%); animation: breathe 5s ease-in-out infinite; }
+    .bg-orb:nth-child(1) { width: 500px; height: 500px; top: -200px; right: -150px; }
+    .bg-orb:nth-child(2) { width: 400px; height: 400px; bottom: -150px; left: -100px; animation-delay: -2.5s; }
+    @keyframes breathe { 0%,100%{transform:scale(1);opacity:.7} 50%{transform:scale(1.15);opacity:1} }
+
+    .login-logo { position: relative; z-index:1; text-align: center; margin-bottom: 32px; }
+    .crown-icon { font-size: 64px; display: block; animation: float 3s ease-in-out infinite; filter: drop-shadow(0 0 20px rgba(201,168,76,0.55)); }
+    @keyframes float { 0%,100%{transform:translateY(0) rotate(-4deg)} 50%{transform:translateY(-10px) rotate(4deg)} }
+    .school-name { font-family: "Playfair Display", serif; font-size: clamp(26px, 7vw, 38px); color: var(--gold); display: block; margin-top: 12px; }
+    .school-tagline { font-size: 11px; color: rgba(255,255,255,0.45); letter-spacing: 3px; text-transform: uppercase; display: block; margin-top: 6px; }
+
+    .login-card {
+      position: relative; z-index: 1; width: 100%; max-width: 400px;
+      background: rgba(255,255,255,0.06); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(201,168,76,0.18); border-radius: 24px; padding: 36px 28px;
+    }
+    .login-card h2 { font-family: "Playfair Display", serif; color: var(--white); font-size: 20px; text-align: center; margin-bottom: 6px; }
+    .login-card p { font-size: 13px; color: rgba(255,255,255,0.45); text-align: center; margin-bottom: 28px; }
+
+    .code-input {
+      width: 100%; background: rgba(255,255,255,0.08); border: 1.5px solid rgba(201,168,76,0.22);
+      border-radius: 12px; padding: 15px 18px; font-family: "DM Sans", sans-serif; font-size: 18px;
+      font-weight: 600; color: var(--white); text-align: center; letter-spacing: 5px; outline: none;
+      transition: all 0.25s; margin-bottom: 14px;
+    }
+    .code-input::placeholder { color: rgba(255,255,255,0.28); letter-spacing: 1px; font-size: 14px; font-weight: 400; }
+    .code-input:focus { border-color: var(--gold); background: rgba(255,255,255,0.13); }
+
+    .btn-gold {
+      width: 100%; background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+      color: var(--navy-deep); border: none; border-radius: 12px; padding: 15px;
+      font-family: "DM Sans", sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.25s;
+    }
+    .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(201,168,76,0.4); }
+    .btn-gold:active { transform: translateY(0); }
+
+    .login-error { color: #ff7675; font-size: 13px; text-align: center; margin-top: 12px; min-height: 20px; }
+
+    /* ===== APP HEADER ===== */
+    .app-header {
+      background: var(--navy); height: 58px; display: flex; align-items: center;
+      justify-content: space-between; padding: 0 16px; position: sticky; top: 0;
+      z-index: 200; box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+    }
+    .h-left { display: flex; align-items: center; gap: 10px; }
+    .h-crown { font-size: 24px; }
+    .h-school { font-family: "Playfair Display", serif; color: var(--gold); font-size: 14px; font-weight: 600; line-height: 1.2; }
+    .h-sub { font-size: 11px; color: rgba(255,255,255,0.5); line-height: 1.2; }
+    .btn-logout {
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.6); border-radius: 8px; padding: 6px 12px;
+      font-family: "DM Sans", sans-serif; font-size: 12px; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-logout:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* ===== TABS ===== */
+    .tabs-bar {
+      background: var(--white); display: flex; gap: 2px; padding: 5px;
+      border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none;
+      position: sticky; top: 58px; z-index: 100; box-shadow: var(--shadow-sm);
+    }
+    .tabs-bar::-webkit-scrollbar { display: none; }
+    .tab-btn {
+      flex: none; background: none; border: none; border-radius: var(--r-sm);
+      padding: 8px 13px; font-family: "DM Sans", sans-serif; font-size: 12px; font-weight: 500;
+      color: var(--text-mid); cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    }
+    .tab-btn.active { background: var(--navy); color: var(--gold); font-weight: 600; }
+    .tab-btn:not(.active):hover { background: var(--bg); }
+
+    /* ===== CONTENT ===== */
+    .content-area { max-width: 720px; margin: 0 auto; padding: 16px 14px 40px; }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; animation: fadeUp 0.25s ease; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+    /* ===== ANNOUNCEMENTS ===== */
+    .ann-card {
+      background: linear-gradient(135deg, var(--navy-deep), var(--navy-mid));
+      border-radius: var(--r); padding: 18px 20px; margin-bottom: 12px;
+      position: relative; overflow: hidden; animation: fadeUp 0.3s ease;
+    }
+    .ann-card::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background: var(--gold); }
+    .ann-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--gold); font-weight: 700; margin-bottom: 6px; }
+    .ann-text { color: rgba(255,255,255,0.9); font-size: 14px; line-height: 1.65; }
+    .ann-date { font-size: 11px; color: rgba(255,255,255,0.38); margin-top: 8px; }
+    .ann-del { position:absolute; top:10px; right:10px; background:rgba(255,255,255,0.08); border:none; border-radius:6px; padding:4px 9px; color:rgba(255,255,255,0.45); font-size:12px; cursor:pointer; transition:all 0.2s; }
+    .ann-del:hover { background:rgba(231,76,60,0.35); color:#ff7675; }
+
+    /* ===== DOC CARDS ===== */
+    .doc-card {
+      background: var(--white); border-radius: var(--r); padding: 16px 18px; margin-bottom: 12px;
+      box-shadow: var(--shadow-sm); border-left: 4px solid var(--border);
+      animation: fadeUp 0.3s ease; position: relative;
+    }
+    .doc-card[data-type="devoir"] { border-left-color: #e74c3c; }
+    .doc-card[data-type="examen"] { border-left-color: #8e44ad; }
+    .doc-card[data-type="exercice"] { border-left-color: #2980b9; }
+    .doc-card[data-type="cours"] { border-left-color: #27ae60; }
+    .doc-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:8px; }
+    .doc-title { font-family:"Playfair Display",serif; font-size:16px; color:var(--navy); flex:1; line-height:1.3; }
+    .doc-badge { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; padding:3px 9px; border-radius:5px; flex-shrink:0; }
+    .badge-devoir { background:#fdeaea; color:#e74c3c; }
+    .badge-examen { background:#f4eafd; color:#8e44ad; }
+    .badge-exercice { background:#eaf3fd; color:#2980b9; }
+    .badge-cours { background:#eafdf4; color:#27ae60; }
+    .doc-body { font-size:14px; color:var(--text-mid); line-height:1.65; white-space:pre-wrap; }
+    .doc-link { display:inline-flex; align-items:center; gap:5px; color:var(--navy); font-size:13px; font-weight:600; text-decoration:none; margin-top:10px; padding:7px 14px; border:1.5px solid var(--navy); border-radius:8px; transition:all 0.2s; }
+    .doc-link:hover { background:var(--navy); color:var(--white); }
+    .doc-meta { font-size:11px; color:var(--text-light); margin-top:8px; }
+    .doc-del { position:absolute; top:10px; right:10px; background:none; border:1px solid var(--border); border-radius:6px; padding:4px 9px; color:var(--text-light); font-size:12px; cursor:pointer; transition:all 0.2s; }
+    .doc-del:hover { background:#fdeaea; border-color:#e74c3c; color:#e74c3c; }
+
+    /* ===== EMPTY STATE ===== */
+    .empty-state { text-align:center; padding:50px 20px; color:var(--text-light); }
+    .empty-icon { font-size:48px; display:block; margin-bottom:14px; }
+    .empty-state p { font-size:14px; }
+
+    /* ===== MESSAGES ===== */
+    .messages-feed { margin-bottom: 12px; min-height: 120px; }
+    .msg-bubble { border-radius:14px; padding:12px 16px; margin-bottom:10px; max-width:85%; animation:fadeUp 0.2s ease; }
+    .msg-bubble.s-msg { background:var(--white); box-shadow:var(--shadow-sm); margin-right:auto; border-bottom-left-radius:4px; }
+    .msg-bubble.a-msg { background:linear-gradient(135deg,var(--navy),var(--navy-mid)); margin-left:auto; border-bottom-right-radius:4px; }
+    .msg-author { font-size:12px; font-weight:700; margin-bottom:4px; }
+    .s-msg .msg-author { color:var(--navy); }
+    .a-msg .msg-author { color:var(--gold); }
+    .msg-text { font-size:14px; line-height:1.55; }
+    .s-msg .msg-text { color:var(--text); }
+    .a-msg .msg-text { color:rgba(255,255,255,0.9); }
+    .msg-time { font-size:11px; margin-top:5px; }
+    .s-msg .msg-time { color:var(--text-light); }
+    .a-msg .msg-time { color:rgba(255,255,255,0.38); }
+
+    .compose-box { background:var(--white); border-radius:var(--r); padding:16px; box-shadow:var(--shadow); }
+    .compose-box input, .compose-box textarea {
+      width:100%; border:1.5px solid var(--border); border-radius:10px;
+      padding:11px 14px; font-family:"DM Sans",sans-serif; font-size:14px;
+      color:var(--text); outline:none; transition:border-color 0.2s; margin-bottom:10px;
+    }
+    .compose-box input:focus, .compose-box textarea:focus { border-color:var(--navy); }
+    .compose-box textarea { resize:none; height:80px; }
+
+    .btn-navy { background:var(--navy); color:var(--gold); border:none; border-radius:10px; padding:12px 20px; font-family:"DM Sans",sans-serif; font-size:14px; font-weight:600; cursor:pointer; transition:all 0.2s; width:100%; }
+    .btn-navy:hover { background:var(--navy-mid); }
+
+    /* ===== ADMIN LAYOUT ===== */
+    .section-title { font-family:"Playfair Display",serif; font-size:18px; color:var(--navy); margin-bottom:16px; }
+
+    .stat-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin-bottom:24px; }
+    .stat-card { background:var(--white); border-radius:var(--r); padding:18px 16px; text-align:center; box-shadow:var(--shadow-sm); }
+    .stat-number { font-family:"Playfair Display",serif; font-size:34px; color:var(--navy); font-weight:700; }
+    .stat-label { font-size:12px; color:var(--text-mid); margin-top:3px; }
+
+    .form-card { background:var(--white); border-radius:var(--r); padding:20px; box-shadow:var(--shadow-sm); margin-bottom:16px; }
+    .form-card h3 { font-family:"Playfair Display",serif; font-size:16px; color:var(--navy); margin-bottom:16px; padding-bottom:10px; border-bottom:1px solid var(--border); }
+    .form-group { margin-bottom:14px; }
+    .form-group label { display:block; font-size:11px; font-weight:700; color:var(--text-mid); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:6px; }
+    .form-group input, .form-group select, .form-group textarea {
+      width:100%; border:1.5px solid var(--border); border-radius:10px; padding:11px 14px;
+      font-family:"DM Sans",sans-serif; font-size:14px; color:var(--text); background:var(--white); outline:none; transition:border-color 0.2s;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color:var(--navy); }
+    .form-group textarea { resize:vertical; min-height:80px; }
+
+    .class-chips { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+    .class-chip { padding:11px; border:1.5px solid var(--border); border-radius:10px; text-align:center; font-size:13px; font-weight:500; cursor:pointer; transition:all 0.2s; background:none; font-family:"DM Sans",sans-serif; color:var(--text-mid); }
+    .class-chip.on { border-color:var(--navy); background:var(--navy); color:var(--gold); font-weight:600; }
+
+    /* Admin messages */
+    .cls-msgs-wrap { margin-bottom:12px; border-radius:var(--r); overflow:hidden; box-shadow:var(--shadow-sm); }
+    .cls-msgs-head { display:flex; align-items:center; justify-content:space-between; padding:13px 16px; background:var(--navy); cursor:pointer; user-select:none; }
+    .cls-msgs-head .cls-label { font-family:"Playfair Display",serif; color:var(--gold); font-size:15px; }
+    .cls-msgs-head .cls-count { background:rgba(201,168,76,0.18); color:var(--gold); font-size:11px; font-weight:600; padding:3px 10px; border-radius:12px; }
+    .cls-msgs-body { background:var(--white); border:1px solid var(--border); border-top:none; padding:16px; display:none; }
+    .cls-msgs-body.open { display:block; }
+
+    /* Params */
+    .code-row { display:flex; align-items:center; gap:10px; padding:12px 0; border-bottom:1px solid var(--border); }
+    .code-row:last-child { border-bottom:none; }
+    .code-name { flex:1; font-size:14px; font-weight:500; }
+    .code-row input { width:130px; border:1.5px solid var(--border); border-radius:8px; padding:8px 12px; font-family:"DM Sans",sans-serif; font-size:14px; text-align:center; font-weight:600; letter-spacing:1px; outline:none; transition:border-color 0.2s; }
+    .code-row input:focus { border-color:var(--navy); }
+
+    /* Loading */
+    .spinner { display:inline-block; width:30px; height:30px; border:3px solid rgba(27,42,74,0.12); border-top-color:var(--navy); border-radius:50%; animation:spin 0.75s linear infinite; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    .loading-c { display:flex; align-items:center; justify-content:center; padding:40px; }
+
+    /* Toast */
+    .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(90px); background:var(--navy-deep); color:var(--white); padding:12px 24px; border-radius:100px; font-size:13px; font-weight:500; box-shadow:var(--shadow-lg); z-index:9999; transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1); border-left:3px solid var(--gold); white-space:nowrap; max-width:90vw; text-overflow:ellipsis; overflow:hidden; }
+    .toast.show { transform:translateX(-50%) translateY(0); }
+    .toast.ok { border-left-color:#27ae60; }
+    .toast.err { border-left-color:#e74c3c; }
+
+    /* Student list table */
+    .student-table { width:100%; border-collapse:collapse; font-size:13px; }
+    .student-table th { background:var(--navy); color:var(--gold); padding:9px 10px; text-align:left; font-size:11px; letter-spacing:.8px; text-transform:uppercase; }
+    .student-table th:first-child { border-radius:6px 0 0 6px; }
+    .student-table th:last-child { border-radius:0 6px 6px 0; }
+    .student-table td { padding:9px 10px; border-bottom:1px solid var(--border); color:var(--text); vertical-align:middle; }
+    .student-table tr:last-child td { border-bottom:none; }
+    .student-table tr:hover td { background:#f8f9fc; }
+    .code-pill { background:var(--gold-pale); color:var(--navy); font-weight:700; padding:3px 10px; border-radius:20px; font-size:12px; letter-spacing:1px; }
+    .btn-del-student { background:none; border:1px solid var(--border); border-radius:6px; padding:3px 8px; color:var(--text-light); font-size:11px; cursor:pointer; transition:all .2s; }
+    .btn-del-student:hover { background:#fdeaea; border-color:#e74c3c; color:#e74c3c; }
+
+    /* Setup banner */
+    .setup-banner { background:#fff3cd; border:1px solid #ffc107; border-radius:var(--r); padding:16px 18px; margin-bottom:20px; font-size:13px; line-height:1.6; color:#665500; }
+    .setup-banner strong { display:block; margin-bottom:6px; font-size:14px; }
+    .setup-banner code { background:rgba(0,0,0,0.06); padding:2px 6px; border-radius:4px; font-size:12px; }
+  </style>
+</head>
+<body>
+
+<div id="toast" class="toast"></div>
+
+<!-- ═══════════════════════════════════════
+     LOGIN
+═══════════════════════════════════════ -->
+<div id="login-screen" class="screen active">
+  <div class="bg-orb"></div>
+  <div class="bg-orb"></div>
+
+  <div class="login-logo">
+    <span class="crown-icon">👑</span>
+    <span class="school-name">Les Élites</span>
+    <span class="school-tagline">Espace Scolaire Numérique</span>
+  </div>
+
+  <div class="login-card">
+    <h2>Connexion</h2>
+    <p>Entrez le code de votre classe</p>
+    <input id="code-input" class="code-input" type="text" placeholder="CODE D'ACCÈS"
+           maxlength="25" autocomplete="off" autocapitalize="characters" spellcheck="false">
+    <button class="btn-gold" onclick="doLogin()">Accéder →</button>
+    <div id="login-err" class="login-error"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     STUDENT
+═══════════════════════════════════════ -->
+<div id="student-screen" class="screen">
+  <header class="app-header">
+    <div class="h-left">
+      <span class="h-crown">👑</span>
+      <div>
+        <div class="h-school">Les Élites</div>
+        <div class="h-sub" id="s-class-label">Classe</div>
+      </div>
+    </div>
+    <button class="btn-logout" onclick="doLogout()">Déconnexion</button>
+  </header>
+
+  <nav class="tabs-bar">
+    <button class="tab-btn active" data-tab="s-ann" onclick="sTab(this)">📢 Annonces</button>
+    <button class="tab-btn" data-tab="s-cours" onclick="sTab(this)">📚 Cours</button>
+    <button class="tab-btn" data-tab="s-dev" onclick="sTab(this)">📝 Devoirs</button>
+    <button class="tab-btn" data-tab="s-exam" onclick="sTab(this)">📋 Examens</button>
+    <button class="tab-btn" data-tab="s-exo" onclick="sTab(this)">✏️ Exercices</button>
+    <button class="tab-btn" data-tab="s-msg" onclick="sTab(this)">💬 Messages</button>
+    <button class="tab-btn" data-tab="s-rendu" onclick="sTab(this)">📤 Rendre</button>
+    <button class="tab-btn" data-tab="s-manuals" onclick="sTab(this)">📖 Manuels</button>
+  </nav>
+
+  <div class="content-area">
+    <div id="s-ann" class="tab-pane active">
+      <div id="s-ann-list"><div class="loading-c"><div class="spinner"></div></div></div>
+    </div>
+    <div id="s-cours" class="tab-pane">
+      <div id="s-cours-list"><div class="loading-c"><div class="spinner"></div></div></div>
+    </div>
+    <div id="s-dev" class="tab-pane">
+      <div id="s-dev-list"><div class="loading-c"><div class="spinner"></div></div></div>
+    </div>
+    <div id="s-exam" class="tab-pane">
+      <div id="s-exam-list"><div class="loading-c"><div class="spinner"></div></div></div>
+    </div>
+    <div id="s-exo" class="tab-pane">
+      <div id="s-exo-list"><div class="loading-c"><div class="spinner"></div></div></div>
+    </div>
+    <div id="s-rendu" class="tab-pane">
+      <div class="form-card" style="margin-bottom:14px;">
+        <h3 style="font-family:Playfair Display,serif;font-size:16px;color:#1B2A4A;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #e2e8f0;">📤 Rendre un devoir</h3>
+        <div class="form-group"><label style="display:block;font-size:11px;font-weight:700;color:#5a6a80;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">Votre prénom</label>
+          <input id="rendu-name" type="text" placeholder="Votre prénom" style="width:100%;border:1.5px solid #e2e8f0;border-radius:10px;padding:11px 14px;font-family:DM Sans,sans-serif;font-size:14px;color:#1e2d40;outline:none;"></div>
+        <div class="form-group"><label style="display:block;font-size:11px;font-weight:700;color:#5a6a80;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">Matière</label>
+          <input id="rendu-subject" type="text" placeholder="Ex: Mathématiques — Chapitre 3" style="width:100%;border:1.5px solid #e2e8f0;border-radius:10px;padding:11px 14px;font-family:DM Sans,sans-serif;font-size:14px;color:#1e2d40;outline:none;"></div>
+        <div class="form-group"><label style="display:block;font-size:11px;font-weight:700;color:#5a6a80;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">Votre réponse (texte)</label>
+          <textarea id="rendu-text" placeholder="Écrivez votre réponse ici..." style="width:100%;border:1.5px solid #e2e8f0;border-radius:10px;padding:11px 14px;font-family:DM Sans,sans-serif;font-size:14px;color:#1e2d40;outline:none;resize:vertical;min-height:100px;"></textarea></div>
+        <div class="form-group"><label style="display:block;font-size:11px;font-weight:700;color:#5a6a80;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">Lien photo du devoir (facultatif)</label>
+          <input id="rendu-link" type="url" placeholder="https://... (photo prise avec smartphone)" style="width:100%;border:1.5px solid #e2e8f0;border-radius:10px;padding:11px 14px;font-family:DM Sans,sans-serif;font-size:14px;color:#1e2d40;outline:none;"></div>
+        <button class="btn-navy" onclick="submitRendu()">📤 Envoyer le devoir</button>
+      </div>
+      <div id="s-rendu-history"></div>
+    </div>
+
+    <div id="s-manuals" class="tab-pane">
+      <div id="s-manuals-list"><div class="loading-c"><div class="spinner"></div></div></div>
+    </div>
+
+    <div id="s-msg" class="tab-pane">
+      <div id="s-msg-feed" class="messages-feed"></div>
+      <div class="compose-box">
+        <input id="msg-name" type="text" placeholder="Votre prénom" maxlength="30">
+        <textarea id="msg-body" placeholder="Écrivez votre message..."></textarea>
+        <button class="btn-navy" onclick="sendSMsg()">📤 Envoyer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     ADMIN
+═══════════════════════════════════════ -->
+<div id="admin-screen" class="screen">
+  <header class="app-header">
+    <div class="h-left">
+      <span class="h-crown">👑</span>
+      <div>
+        <div class="h-school">Les Élites</div>
+        <div class="h-sub">Directeur — Tableau de bord</div>
+      </div>
+    </div>
+    <button class="btn-logout" onclick="doLogout()">Déconnexion</button>
+  </header>
+
+  <nav class="tabs-bar">
+    <button class="tab-btn active" data-tab="a-overview" onclick="aTab(this)">📊 Aperçu</button>
+    <button class="tab-btn" data-tab="a-publish" onclick="aTab(this)">➕ Publier</button>
+    <button class="tab-btn" data-tab="a-msgs" onclick="aTab(this)">💬 Messages</button>
+    <button class="tab-btn" data-tab="a-params" onclick="aTab(this)">⚙️ Paramètres</button>
+    <button class="tab-btn" data-tab="a-liste" onclick="aTab(this)">📋 Liste élèves</button>
+  </nav>
+
+  <div class="content-area">
+
+    <!-- Aperçu -->
+    <div id="a-overview" class="tab-pane active">
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-number" id="st-docs">—</div><div class="stat-label">Documents publiés</div></div>
+        <div class="stat-card"><div class="stat-number" id="st-msgs">—</div><div class="stat-label">Messages reçus</div></div>
+        <div class="stat-card"><div class="stat-number" id="st-anns">—</div><div class="stat-label">Annonces</div></div>
+        <div class="stat-card"><div class="stat-number">4</div><div class="stat-label">Classes actives</div></div>
+      </div>
+      <p class="section-title">📢 Dernières annonces</p>
+      <div id="a-recent-anns"></div>
+    </div>
+
+    <!-- Publier -->
+    <div id="a-publish" class="tab-pane">
+      <div class="form-card">
+        <h3>📢 Publier une annonce générale</h3>
+        <div class="form-group">
+          <label>Message (visible par toutes les classes)</label>
+          <textarea id="ann-input" placeholder="Réunion parents le 15 juin à 17h..."></textarea>
+        </div>
+        <button class="btn-navy" onclick="pubAnn()">Publier l'annonce</button>
+      </div>
+
+      <div class="form-card">
+        <h3>📄 Ajouter un document</h3>
+        <div class="form-group">
+          <label>Classe(s) destinataire(s)</label>
+          <div class="class-chips">
+            <button class="class-chip" data-cls="classe3" onclick="toggleChip(this)">1ère AS</button>
+            <button class="class-chip" data-cls="classe4" onclick="toggleChip(this)">2ème AS</button>
+            <button class="class-chip" data-cls="classe5" onclick="toggleChip(this)">3ème AS</button>
+            <button class="class-chip" data-cls="classe6" onclick="toggleChip(this)">4ème AS</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Type de document</label>
+          <select id="doc-type">
+            <option value="cours">📚 Cours</option>
+            <option value="devoir">📝 Devoir</option>
+            <option value="examen">📋 Examen</option>
+            <option value="exercice">✏️ Exercice</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Titre</label>
+          <input id="doc-title" type="text" placeholder="Ex : Conjugaison — Les verbes du 3ème groupe">
+        </div>
+        <div class="form-group">
+          <label>Contenu / Consignes</label>
+          <textarea id="doc-body" placeholder="Instructions, énoncé, résumé du cours..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Lien externe (facultatif)</label>
+          <input id="doc-link" type="url" placeholder="https://... (YouTube, Google Drive, site web)">
+        </div>
+        <div class="form-group">
+          <label>OU télécharger une image directement (JPG, PNG — max 5 MB)</label>
+          <input type="file" id="doc-file" accept="image/*"
+            style="width:100%;border:1.5px dashed #e2e8f0;border-radius:10px;padding:10px;font-size:13px;cursor:pointer;background:#f8f9fc;">
+          <div id="upload-progress" style="display:none;margin-top:8px;">
+            <div style="background:#e2e8f0;border-radius:4px;height:8px;">
+              <div id="upload-bar" style="background:#C9A84C;height:8px;border-radius:4px;width:0%;transition:width 0.3s;"></div>
+            </div>
+            <p id="upload-status" style="font-size:12px;color:#5a6a80;margin-top:4px;">Téléchargement en cours...</p>
+          </div>
+        </div>
+        <button class="btn-navy" onclick="pubDoc()">Publier le document</button>
+      </div>
+
+      <div class="form-card">
+        <h3>📖 Ajouter un manuel de maths</h3>
+        <div class="form-group">
+          <label>Niveau</label>
+          <select id="manual-level">
+            <option value="1AS">1ère Année (1AS)</option>
+            <option value="2AS">2ème Année (2AS)</option>
+            <option value="3AS">3ème Année (3AS)</option>
+            <option value="4AS">4ème Année (4AS)</option>
+            <option value="tous">Tous les niveaux</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Titre du manuel</label>
+          <input id="manual-title" type="text" placeholder="Ex: Manuel de Mathématiques 1ère AS">
+        </div>
+        <div class="form-group">
+          <label>Lien de téléchargement (PDF)</label>
+          <input id="manual-link" type="url" placeholder="https://...">
+        </div>
+<div class="form-group">
+  <label>📁 OU uploader image depuis votre PC</label>
+  <input type="file" id="manual-file" accept="image/*,application/pdf"
+    style="width:100%;padding:10px;border:1.5px dashed #C9A84C;border-radius:10px;background:#FBF3DC;cursor:pointer"
+    onchange="handleManualFile(this)">
+</div>
+        <div class="form-group">
+          <label>Description (facultatif)</label>
+          <input id="manual-desc" type="text" placeholder="Ex: Programme officiel 2024-2025">
+        </div>
+        <button class="btn-navy" onclick="pubManual()">Ajouter le manuel</button>
+      </div>
+    </div>
+
+    <!-- Messages Admin -->
+    <div id="a-msgs" class="tab-pane">
+      <h3 style="font-family:Playfair Display,serif;font-size:16px;color:#1B2A4A;margin-bottom:16px;">📤 Devoirs rendus par les élèves</h3>
+      <div id="a-rendus-list"><div class="loading-c"><div class="spinner"></div></div></div>
+      <h3 style="font-family:Playfair Display,serif;font-size:16px;color:#1B2A4A;margin:20px 0 16px;">💬 Messages des classes</h3>
+      <div id="a-msgs-list"><div class="loading-c"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- Paramètres -->
+    <div id="a-params" class="tab-pane">
+      <div class="form-card">
+        <h3>🔑 Codes d'accès</h3>
+        <div id="codes-editor"></div>
+        <button class="btn-navy" style="margin-top:16px" onclick="saveCodes()">💾 Enregistrer les codes</button>
+      </div>
+      <div class="form-card">
+        <h3>🗑️ Supprimer des données</h3>
+        <p style="font-size:13px;color:var(--text-mid);margin-bottom:14px;">Supprimer tous les documents ou messages d'une classe.</p>
+        <div class="form-group">
+          <label>Classe</label>
+          <select id="del-class">
+            <option value="classe3">1ère AS</option>
+            <option value="classe4">2ème AS</option>
+            <option value="classe5">3ème AS</option>
+            <option value="classe6">4ème AS</option>
+          </select>
+        </div>
+        <p style="font-size:12px;color:#e74c3c;margin-bottom:10px;">⚠️ Cette action est irréversible !</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn-navy" style="background:#c0392b;flex:1" onclick="clearDocs()">🗑️ Supprimer TOUS les documents</button>
+          <button class="btn-navy" style="background:#c0392b;flex:1" onclick="clearMsgs()">🗑️ Supprimer TOUS les messages</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Liste des élèves -->
+    <div id="a-liste" class="tab-pane">
+      <div class="form-card">
+        <h3>➕ Ajouter un élève</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div class="form-group" style="margin-bottom:0">
+            <label>Classe</label>
+            <select id="new-student-class">
+              <option value="classe3">1ère AS</option>
+              <option value="classe4">2ème AS</option>
+              <option value="classe5">3ème AS</option>
+              <option value="classe6">4ème AS</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Date d'entrée / Paiement</label>
+            <input id="new-student-date" type="date">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+          <div class="form-group" style="margin-bottom:0">
+            <label>Nom et Prénom</label>
+            <input id="new-student-name" type="text" placeholder="Ex: Ahmed Ben Ali">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Code personnel</label>
+            <input id="new-student-code" type="text" placeholder="Ex: ELITE3-AHMED">
+          </div>
+        </div>
+        <button class="btn-navy" onclick="addStudent()">➕ Ajouter l'élève</button>
+      </div>
+
+      <!-- Tables par classe -->
+      <div id="liste-classe3" class="form-card" style="margin-bottom:16px;">
+        <h3 style="display:flex;justify-content:space-between;align-items:center;">
+          👑 1ère Année (1AS)
+          <span id="count-classe3" style="font-size:13px;color:#5a6a80;font-family:DM Sans,sans-serif;font-weight:400;">0 élève(s)</span>
+        </h3>
+        <div id="table-classe3"></div>
+      </div>
+      <div id="liste-classe4" class="form-card" style="margin-bottom:16px;">
+        <h3 style="display:flex;justify-content:space-between;align-items:center;">
+          👑 2ème Année (2AS)
+          <span id="count-classe4" style="font-size:13px;color:#5a6a80;font-family:DM Sans,sans-serif;font-weight:400;">0 élève(s)</span>
+        </h3>
+        <div id="table-classe4"></div>
+      </div>
+      <div id="liste-classe5" class="form-card" style="margin-bottom:16px;">
+        <h3 style="display:flex;justify-content:space-between;align-items:center;">
+          👑 3ème Année (3AS)
+          <span id="count-classe5" style="font-size:13px;color:#5a6a80;font-family:DM Sans,sans-serif;font-weight:400;">0 élève(s)</span>
+        </h3>
+        <div id="table-classe5"></div>
+      </div>
+      <div id="liste-classe6" class="form-card" style="margin-bottom:16px;">
+        <h3 style="display:flex;justify-content:space-between;align-items:center;">
+          👑 4ème Année (4AS)
+          <span id="count-classe6" style="font-size:13px;color:#5a6a80;font-family:DM Sans,sans-serif;font-weight:400;">0 élève(s)</span>
+        </h3>
+        <div id="table-classe6"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  🔧 CONFIGURATION FIREBASE
+//  Remplacez les valeurs ci-dessous par votre config Firebase
+//  (Firebase Console → Projet → Paramètres → Votre application)
+// ═══════════════════════════════════════════════════════
+const FB_CONFIG = {
+  apiKey:            "AIzaSyD6ezy28tA6No5lY27LZPFjCIM42IR5uVc",
+  authDomain:        "les-elites-22099.firebaseapp.com",
+  projectId:         "les-elites-22099",
+  storageBucket:     "les-elites-22099.firebasestorage.app",
+  messagingSenderId: "422067420857",
+  appId:             "1:422067420857:web:a378b56b75b23ca66d2568"
+};
+
+// ═══════════════════════════════════════════════════════
+//  CODES PAR DÉFAUT (modifiables depuis l'espace admin)
+// ═══════════════════════════════════════════════════════
+const DEFAULT_CODES = {
+  classe3: "ELITE3",
+  classe4: "ELITE4",
+  classe5: "ELITE5",
+  classe6: "ELITE6",
+  admin:   "DIRECTEUR2024"
+};
+
+const CLASS_NAMES = {
+  classe3: "1ère Année (1AS)",
+  classe4: "2ème Année (2AS)",
+  classe5: "3ème Année (3AS)",
+  classe6: "4ème Année (4AS)"
+};
+
+const TYPE_ICONS  = { cours:"📚", devoir:"📝", examen:"📋", exercice:"✏️" };
+const TYPE_LABELS = { cours:"Cours", devoir:"Devoir", examen:"Examen", exercice:"Exercice" };
+const TYPE_EMPTY  = {
+  cours:    { icon:"📚", text:"Aucun cours disponible pour le moment" },
+  devoir:   { icon:"📝", text:"Aucun devoir assigné pour le moment" },
+  examen:   { icon:"📋", text:"Aucun examen prévu pour le moment" },
+  exercice: { icon:"✏️", text:"Aucun exercice disponible pour le moment" }
+};
+
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+let db = null;
+let currentClass = null;
+let isAdmin = false;
+let codes = { ...DEFAULT_CODES };
+let msgUnsub = null;
+
+// ═══════════════════════════════════════════════════════
+//  FIREBASE INIT
+// ═══════════════════════════════════════════════════════
+function bootFirebase() {
+  try {
+    firebase.initializeApp(FB_CONFIG);
+    db = firebase.firestore();
+    return loadCodesFromDB();
+  } catch(e) {
+    console.error("Firebase init:", e);
+    toast("Erreur Firebase. Vérifiez la configuration.", "err");
+  }
+}
+
+async function loadCodesFromDB() {
+  try {
+    const snap = await db.collection("settings").doc("codes").get();
+    if (snap.exists) codes = { ...DEFAULT_CODES, ...snap.data() };
+    else await db.collection("settings").doc("codes").set(DEFAULT_CODES);
+  } catch(e) { console.warn("Codes not loaded:", e); }
+}
+
+// ═══════════════════════════════════════════════════════
+//  SCREENS & TABS
+// ═══════════════════════════════════════════════════════
+function show(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+function sTab(btn) {
+  document.querySelectorAll("#student-screen .tab-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll("#student-screen .tab-pane").forEach(p => p.classList.remove("active"));
+  btn.classList.add("active");
+  const id = btn.dataset.tab;
+  document.getElementById(id).classList.add("active");
+  if (id === "s-msg")     initStudentMsgListener();
+  if (id === "s-cours")   loadStudentDocs("cours");
+  if (id === "s-dev")     loadStudentDocs("devoir");
+  if (id === "s-exam")    loadStudentDocs("examen");
+  if (id === "s-exo")     loadStudentDocs("exercice");
+  if (id === "s-rendu")   loadRenduHistory();
+  if (id === "s-manuals") loadStudentManuals();
+}
+
+function aTab(btn) {
+  document.querySelectorAll("#admin-screen .tab-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll("#admin-screen .tab-pane").forEach(p => p.classList.remove("active"));
+  btn.classList.add("active");
+  const id = btn.dataset.tab;
+  document.getElementById(id).classList.add("active");
+  if (id === "a-overview") { loadStats(); loadAdminRecentAnnouncements(); }
+  if (id === "a-msgs")     { loadAdminRendus(); loadAdminMsgs(); }
+  if (id === "a-liste")    loadAllStudentLists();
+  if (id === "a-params")   renderCodesEditor();
+}
+
+// ═══════════════════════════════════════════════════════
+//  LOGIN / LOGOUT
+// ═══════════════════════════════════════════════════════
+function doLogin() {
+  const code = document.getElementById("code-input").value.trim().toUpperCase();
+  const err  = document.getElementById("login-err");
+  err.textContent = "";
+  if (!code) { err.textContent = "Veuillez entrer un code."; return; }
+
+  if (code === codes.admin.toUpperCase()) {
+    isAdmin = true; currentClass = null;
+    show("admin-screen");
+    if (db) { loadStats(); loadAdminRecentAnnouncements(); }
+    return;
+  }
+  for (const [cid, ccode] of Object.entries(codes)) {
+    if (cid === "admin") continue;
+    if (code === ccode.toUpperCase()) {
+      isAdmin = false; currentClass = cid;
+      document.getElementById("s-class-label").textContent = CLASS_NAMES[cid];
+      show("student-screen");
+      if (db) {
+        loadStudentAnns();
+        loadStudentDocs("cours");
+        loadStudentDocs("devoir");
+        loadStudentDocs("examen");
+        loadStudentDocs("exercice");
+      }
+      return;
+    }
+  }
+  err.textContent = "Code invalide. Vérifiez auprès de votre enseignant.";
+}
+
+document.getElementById("code-input").addEventListener("keypress", e => { if (e.key === "Enter") doLogin(); });
+
+function doLogout() {
+  if (msgUnsub) { msgUnsub(); msgUnsub = null; }
+  currentClass = null; isAdmin = false;
+  document.getElementById("code-input").value = "";
+  document.getElementById("login-err").textContent = "";
+  // Reset student tabs
+  document.querySelectorAll("#student-screen .tab-btn").forEach((b, i) => b.classList.toggle("active", i === 0));
+  document.querySelectorAll("#student-screen .tab-pane").forEach((p, i) => p.classList.toggle("active", i === 0));
+  document.querySelectorAll("#admin-screen .tab-btn").forEach((b, i) => b.classList.toggle("active", i === 0));
+  document.querySelectorAll("#admin-screen .tab-pane").forEach((p, i) => p.classList.toggle("active", i === 0));
+  show("login-screen");
+}
+
+// ═══════════════════════════════════════════════════════
+//  ANNOUNCEMENTS
+// ═══════════════════════════════════════════════════════
+async function loadStudentAnns() {
+  const el = document.getElementById("s-ann-list");
+  el.innerHTML = loader();
+  try {
+    const snap = await db.collection("announcements").orderBy("date","desc").limit(20).get();
+    if (snap.empty) { el.innerHTML = empty("📢","Aucune annonce pour le moment"); return; }
+    el.innerHTML = "";
+    snap.forEach(d => el.insertAdjacentHTML("beforeend", annCard(d.id, d.data(), false)));
+  } catch(e) { el.innerHTML = empty("⚠️","Erreur de chargement"); }
+}
+
+async function loadAdminRecentAnnouncements() {
+  const el = document.getElementById("a-recent-anns");
+  el.innerHTML = loader();
+  try {
+    const snap = await db.collection("announcements").orderBy("date","desc").limit(5).get();
+    if (snap.empty) { el.innerHTML = empty("📢","Aucune annonce publiée"); return; }
+    el.innerHTML = "";
+    snap.forEach(d => el.insertAdjacentHTML("beforeend", annCard(d.id, d.data(), true)));
+  } catch(e) { el.innerHTML = empty("⚠️","Erreur de chargement"); }
+}
+
+function annCard(id, data, admin) {
+  const dt = data.date ? fmtDate(data.date.toDate()) : "";
+  const del = admin ? `<button class="ann-del" onclick="delAnn('${id}')">✕</button>` : "";
+  return `<div class="ann-card" id="ann-${id}">
+    <div class="ann-label">📢 Annonce du Directeur</div>
+    <div class="ann-text">${esc(data.text)}</div>
+    <div class="ann-date">${dt}</div>
+    ${del}
+  </div>`;
+}
+
+async function pubAnn() {
+  const text = document.getElementById("ann-input").value.trim();
+  if (!text) { toast("Veuillez écrire une annonce.","err"); return; }
+  try {
+    await db.collection("announcements").add({ text, date: firebase.firestore.FieldValue.serverTimestamp() });
+    document.getElementById("ann-input").value = "";
+    toast("Annonce publiée !","ok");
+    loadAdminRecentAnnouncements(); loadStats();
+  } catch(e) { toast("Erreur de publication.","err"); }
+}
+
+async function delAnn(id) {
+  try {
+    await db.collection("announcements").doc(id).delete();
+    document.getElementById("ann-"+id)?.remove();
+    toast("Annonce supprimée.");
+    loadStats();
+  } catch(e) { toast("Erreur.","err"); }
+}
+
+// ═══════════════════════════════════════════════════════
+//  DOCUMENTS
+// ═══════════════════════════════════════════════════════
+const TAB_MAP = { cours:"s-cours-list", devoir:"s-dev-list", examen:"s-exam-list", exercice:"s-exo-list" };
+
+async function loadStudentDocs(type) {
+  const el = document.getElementById(TAB_MAP[type]);
+  if (!el) return;
+  el.innerHTML = loader();
+  try {
+    let snap;
+    try {
+      snap = await db.collection("documents")
+        .where("classId","==",currentClass)
+        .where("type","==",type)
+        .orderBy("date","desc").get();
+    } catch(idx) {
+      // Fallback: sort in memory if index missing
+      const s2 = await db.collection("documents")
+        .where("classId","==",currentClass)
+        .where("type","==",type).get();
+      const arr = [];
+      s2.forEach(d => arr.push({ id: d.id, data: d.data() }));
+      arr.sort((a,b) => (b.data.date?.seconds||0) - (a.data.date?.seconds||0));
+      if (arr.length === 0) { el.innerHTML = empty(TYPE_EMPTY[type].icon, TYPE_EMPTY[type].text); return; }
+      el.innerHTML = "";
+      arr.forEach(d => el.insertAdjacentHTML("beforeend", docCard(d.id, d.data, false)));
+      return;
+    }
+    if (snap.empty) { el.innerHTML = empty(TYPE_EMPTY[type].icon, TYPE_EMPTY[type].text); return; }
+    el.innerHTML = "";
+    snap.forEach(d => el.insertAdjacentHTML("beforeend", docCard(d.id, d.data(), false)));
+  } catch(e) { el.innerHTML = empty("⚠️","Erreur de chargement"); console.error(e); }
+}
+
+function renderFile(link, fileType) {
+  if (!link) return "";
+  // Always recalculate for data URLs
+  const ft = link.startsWith("data:image/") ? "image" : (fileType || getFileType(link));
+  if (ft === "image") return '<a href="' + link + '" target="_blank" style="display:block;margin-top:10px;"><img src="' + link + '" alt="Image" style="width:100%;max-height:280px;object-fit:contain;border-radius:10px;cursor:pointer;"></a>';
+  if (ft === "pdf") return '<a href="' + link + '" target="_blank" class="doc-link">📄 Télécharger le PDF</a>';
+  if (ft === "youtube") {
+    const m = link.match(/(?:v=|youtu\.be\/)([^&\s]+)/);
+    if (m) return '<div style="margin-top:10px;position:relative;padding-bottom:56.25%;height:0;border-radius:10px;overflow:hidden;"><iframe src="https://www.youtube.com/embed/' + m[1] + '" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allowfullscreen></iframe></div>';
+  }
+  if (ft === "video") return '<video controls style="width:100%;border-radius:10px;margin-top:10px;max-height:260px;"><source src="' + link + '"></video>';
+  if (ft === "gdrive") {
+    const viewLink = link.replace("/view", "/preview").replace("?usp=sharing","");
+    return '<a href="' + link + '" target="_blank" class="doc-link">📄 Ouvrir dans Google Drive</a>';
+  }
+  return '<a href="' + link + '" target="_blank" class="doc-link">🔗 Ouvrir le lien</a>';
+}
+
+function docCard(id, d, admin) {
+  const dt   = d.date ? fmtDateShort(d.date.toDate()) : "";
+  const fileHtml = renderFile(d.link, d.fileType);
+  const cls  = admin && d.classId ? " · " + (CLASS_NAMES[d.classId] || d.classId) : "";
+  let html = "<div class=\"doc-card\" data-type=\"" + d.type + "\" id=\"doc-" + id + "\">";
+  html += "<div class=\"doc-top\"><div class=\"doc-title\">" + esc(d.title) + "</div>";
+  html += "<span class=\"doc-badge badge-" + d.type + "\">" + (TYPE_LABELS[d.type]||d.type) + "</span></div>";
+  if (d.content) html += "<div class=\"doc-body\">" + esc(d.content) + "</div>";
+  html += fileHtml;
+  html += "<div class=\"doc-meta\">" + dt + cls + "</div>";
+  if (admin) html += "<button class=\"doc-del\" onclick=\"delDoc('" + id + "')\">\uD83D\uDDD1\uFE0F Supprimer</button>";
+  html += "</div>";
+  return html;
+}
+
+async function uploadFileToStorage(file) {
+  return new Promise((resolve, reject) => {
+    const prog = document.getElementById("upload-progress");
+    const bar  = document.getElementById("upload-bar");
+    const stat = document.getElementById("upload-status");
+    if (prog) prog.style.display = "block";
+    if (stat) stat.textContent = "Compression de l image...";
+    if (bar)  bar.style.width = "30%";
+
+    // Use canvas to compress image
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement("canvas");
+        let w = img.width, h = img.height;
+        const maxSize = 800;
+        if (w > maxSize || h > maxSize) {
+          if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+          else { w = Math.round(w * maxSize / h); h = maxSize; }
+        }
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        if (bar) bar.style.width = "80%";
+        if (stat) stat.textContent = "Finalisation...";
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.75);
+        if (bar) bar.style.width = "100%";
+        setTimeout(() => { if (prog) prog.style.display = "none"; }, 500);
+        resolve(dataUrl);
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function getFileType(link) {
+  if (!link) return "link";
+  if (link.startsWith("data:image/")) return "image";
+  if (link.startsWith("data:")) return "link";
+  const lower = link.toLowerCase().split("?")[0].split("#")[0];
+  if (/\.(jpg|jpeg|png|gif|webp|svg)$/.test(lower)) return "image";
+  if (/\.(pdf)$/.test(lower)) return "pdf";
+  if (/\.(mp4|webm|mov)$/.test(lower)) return "video";
+  if (lower.includes("youtube.com") || lower.includes("youtu.be")) return "youtube";
+  if (lower.includes("drive.google.com")) return "gdrive";
+  return "link";
+}
+
+async function pubDoc() {
+  const selected  = [...document.querySelectorAll(".class-chip.on")].map(c => c.dataset.cls);
+  const type      = document.getElementById("doc-type").value;
+  const title     = document.getElementById("doc-title").value.trim();
+  const docBody   = document.getElementById("doc-body").value.trim();
+  let   link      = document.getElementById("doc-link").value.trim();
+  const fileInput = document.getElementById("doc-file");
+  const file      = fileInput?.files?.[0];
+  if (!selected.length) { toast("Sélectionnez au moins une classe.","err"); return; }
+  if (!title) { toast("Le titre est obligatoire.","err"); return; }
+  if (file && file.size > 5 * 1024 * 1024) { toast("Image trop grande (max 5 MB).","err"); return; }
+  try {
+    if (file && !link) {
+      toast("Téléchargement du fichier...","");
+      link = await uploadFileToStorage(file);
+    }
+    const fileType = file ? "image" : getFileType(link);
+    const batch = db.batch();
+    selected.forEach(classId => {
+      const ref = db.collection("documents").doc();
+      batch.set(ref, { classId, type, title, content: docBody, link, fileType, date: firebase.firestore.FieldValue.serverTimestamp() });
+    });
+    await batch.commit();
+    document.getElementById("doc-title").value = "";
+    document.getElementById("doc-body").value = "";
+    document.getElementById("doc-link").value = "";
+    if (fileInput) fileInput.value = "";
+    document.querySelectorAll(".class-chip.on").forEach(c => c.classList.remove("on"));
+    toast("Document publié pour " + selected.length + " classe(s) !", "ok");
+    loadStats();
+  } catch(e) { toast("Erreur de publication.","err"); console.error(e); }
+}
+
+async function delDoc(id) {
+  try {
+    await db.collection("documents").doc(id).delete();
+    document.getElementById("doc-"+id)?.remove();
+    toast("Document supprimé.");
+    loadStats();
+  } catch(e) { toast("Erreur.","err"); }
+}
+
+function toggleChip(btn) { btn.classList.toggle("on"); }
+
+// ═══════════════════════════════════════════════════════
+//  MESSAGES — STUDENT (real-time)
+// ═══════════════════════════════════════════════════════
+function initStudentMsgListener() {
+  const feed = document.getElementById("s-msg-feed");
+  feed.innerHTML = loader();
+  if (msgUnsub) msgUnsub();
+  msgUnsub = db.collection("messages")
+    .where("classId","==",currentClass)
+    .orderBy("date","asc")
+    .limit(60)
+    .onSnapshot(snap => {
+      if (snap.empty) { feed.innerHTML = empty("💬","Soyez le premier à écrire !"); return; }
+      feed.innerHTML = "";
+      snap.forEach(d => feed.insertAdjacentHTML("beforeend", msgBubble(d.data())));
+      feed.scrollTop = feed.scrollHeight;
+    }, err => {
+      // Fallback without orderBy if index missing
+      db.collection("messages").where("classId","==",currentClass).limit(60).get()
+        .then(s => {
+          const arr = [];
+          s.forEach(d => arr.push(d.data()));
+          arr.sort((a,b) => (a.date?.seconds||0) - (b.date?.seconds||0));
+          if (arr.length === 0) { feed.innerHTML = empty("💬","Soyez le premier à écrire !"); return; }
+          feed.innerHTML = "";
+          arr.forEach(d => feed.insertAdjacentHTML("beforeend", msgBubble(d)));
+          feed.scrollTop = feed.scrollHeight;
+        });
+    });
+}
+
+function msgBubble(d) {
+  const admin = d.isAdmin === true;
+  const cls   = admin ? "a-msg" : "s-msg";
+  const time  = d.date ? d.date.toDate().toLocaleTimeString("fr-TN",{hour:"2-digit",minute:"2-digit"}) : "";
+  return `<div class="msg-bubble ${cls}">
+    <div class="msg-author">${admin ? "👑 Directeur" : esc(d.author)}</div>
+    <div class="msg-text">${esc(d.text)}</div>
+    <div class="msg-time">${time}</div>
+  </div>`;
+}
+
+async function sendSMsg() {
+  const name = document.getElementById("msg-name").value.trim();
+  const body = document.getElementById("msg-body").value.trim();
+  if (!name) { toast("Entrez votre prénom.","err"); return; }
+  if (!body) { toast("Écrivez un message.","err"); return; }
+  try {
+    await db.collection("messages").add({
+      classId: currentClass, author: name, text: body,
+      isAdmin: false, date: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.getElementById("msg-body").value = "";
+  } catch(e) { toast("Erreur d'envoi.","err"); }
+}
+
+// ═══════════════════════════════════════════════════════
+//  MESSAGES — ADMIN
+// ═══════════════════════════════════════════════════════
+async function loadAdminMsgs() {
+  const el = document.getElementById("a-msgs-list");
+  el.innerHTML = loader();
+  try {
+    el.innerHTML = "";
+    for (const [cid, cname] of Object.entries(CLASS_NAMES)) {
+      let msgsArr = [];
+      try {
+        const snap = await db.collection("messages")
+          .where("classId","==",cid).orderBy("date","asc").limit(40).get();
+        snap.forEach(d => msgsArr.push(d.data()));
+      } catch(e) {
+        const snap = await db.collection("messages").where("classId","==",cid).limit(40).get();
+        snap.forEach(d => msgsArr.push(d.data()));
+        msgsArr.sort((a,b) => (a.date?.seconds||0) - (b.date?.seconds||0));
+      }
+      let html = msgsArr.length === 0
+        ? "<p style='font-size:13px;color:var(--text-light);padding:6px 0;'>Aucun message.</p>"
+        : msgsArr.map(d => msgBubble(d)).join("");
+
+      html += `<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+        <textarea id="reply-${cid}" placeholder="Répondre à ${cname}..."
+          style="width:100%;border:1.5px solid var(--border);border-radius:10px;padding:10px;
+                 font-family:inherit;font-size:14px;resize:none;height:70px;outline:none;
+                 margin-bottom:8px;color:var(--text);"></textarea>
+        <button class="btn-navy" onclick="sendAdminReply('${cid}')">Envoyer →</button>
+      </div>`;
+
+      el.insertAdjacentHTML("beforeend", `
+        <div class="cls-msgs-wrap">
+          <div class="cls-msgs-head" onclick="toggleClsMsgs(this)">
+            <span class="cls-label">${cname}</span>
+            <span class="cls-count">${msgsArr.length} msg${msgsArr.length!==1?"s":""}</span>
+          </div>
+          <div class="cls-msgs-body">${html}</div>
+        </div>`);
+    }
+  } catch(e) { el.innerHTML = empty("⚠️","Erreur de chargement"); console.error(e); }
+}
+
+function toggleClsMsgs(hdr) { hdr.nextElementSibling.classList.toggle("open"); }
+
+async function sendAdminReply(cid) {
+  const ta   = document.getElementById("reply-"+cid);
+  const text = ta.value.trim();
+  if (!text) { toast("Écrivez un message.","err"); return; }
+  try {
+    await db.collection("messages").add({
+      classId: cid, author: "Directeur", text, isAdmin: true,
+      date: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    ta.value = "";
+    toast("Message envoyé !","ok");
+    loadAdminMsgs();
+  } catch(e) { toast("Erreur d'envoi.","err"); }
+}
+
+// ═══════════════════════════════════════════════════════
+//  ADMIN STATS
+// ═══════════════════════════════════════════════════════
+async function loadStats() {
+  try {
+    const [docs, msgs, anns] = await Promise.all([
+      db.collection("documents").get(),
+      db.collection("messages").get(),
+      db.collection("announcements").get()
+    ]);
+    document.getElementById("st-docs").textContent = docs.size;
+    document.getElementById("st-msgs").textContent = msgs.size;
+    document.getElementById("st-anns").textContent = anns.size;
+  } catch(e) { console.warn("Stats:", e); }
+}
+
+// ═══════════════════════════════════════════════════════
+//  CODES EDITOR
+// ═══════════════════════════════════════════════════════
+function renderCodesEditor() {
+  const el = document.getElementById("codes-editor");
+  const entries = [
+    ["classe3","1ère AS"],["classe4","2ème AS"],
+    ["classe5","3ème AS"],["classe6","4ème AS"],
+    ["admin","Directeur (admin)"]
+  ];
+  el.innerHTML = entries.map(([k,label]) => `
+    <div class="code-row">
+      <span class="code-name">${label}</span>
+      <input id="c-${k}" type="text" value="${codes[k]||""}" autocapitalize="characters">
+    </div>`).join("");
+}
+
+async function saveCodes() {
+  const keys = ["classe3","classe4","classe5","classe6","admin"];
+  const nc = {};
+  for (const k of keys) {
+    const v = (document.getElementById("c-"+k)?.value||"").trim().toUpperCase();
+    if (!v) { toast("Un code ne peut pas être vide.","err"); return; }
+    nc[k] = v;
+  }
+  try {
+    await db.collection("settings").doc("codes").set(nc);
+    codes = { ...nc };
+    toast("Codes enregistrés !","ok");
+  } catch(e) { toast("Erreur d'enregistrement.","err"); }
+}
+
+async function clearDocs() {
+  const cid = document.getElementById("del-class").value;
+  if (!confirm("Supprimer TOUS les documents de "+CLASS_NAMES[cid]+" ?")) return;
+  try {
+    const snap = await db.collection("documents").where("classId","==",cid).get();
+    const b = db.batch(); snap.forEach(d => b.delete(d.ref));
+    await b.commit();
+    toast(snap.size+" document(s) supprimé(s).","ok"); loadStats();
+  } catch(e) { toast("Erreur.","err"); }
+}
+
+async function clearMsgs() {
+  const cid = document.getElementById("del-class").value;
+  if (!confirm("Supprimer TOUS les messages de "+CLASS_NAMES[cid]+" ?")) return;
+  try {
+    const snap = await db.collection("messages").where("classId","==",cid).get();
+    const b = db.batch(); snap.forEach(d => b.delete(d.ref));
+    await b.commit();
+    toast(snap.size+" message(s) supprimé(s).","ok"); loadStats();
+  } catch(e) { toast("Erreur.","err"); }
+}
+
+// ═══════════════════════════════════════════════════════
+//  UTILITIES
+// ═══════════════════════════════════════════════════════
+function esc(t) {
+  if (!t) return "";
+  return String(t)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;").replace(/\n/g,"<br>");
+}
+
+function fmtDate(d) {
+  return d.toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
+}
+function fmtDateShort(d) {
+  return d.toLocaleDateString("fr-FR",{day:"numeric",month:"long"});
+}
+
+function loader() { return "<div class='loading-c'><div class='spinner'></div></div>"; }
+function empty(icon, text) { return `<div class='empty-state'><span class='empty-icon'>${icon}</span><p>${text}</p></div>`; }
+
+let toastT = null;
+function toast(msg, type="") {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.className = "toast" + (type ? " "+type : "");
+  clearTimeout(toastT);
+  requestAnimationFrame(() => {
+    el.classList.add("show");
+    toastT = setTimeout(() => el.classList.remove("show"), 3200);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDU DE DEVOIRS
+// ═══════════════════════════════════════════════════════
+async function submitRendu() {
+  const name    = document.getElementById("rendu-name").value.trim();
+  const subject = document.getElementById("rendu-subject").value.trim();
+  const text    = document.getElementById("rendu-text").value.trim();
+  const link    = document.getElementById("rendu-link").value.trim();
+  if (!name)    { toast("Entrez votre prénom.","err"); return; }
+  if (!subject) { toast("Indiquez la matière.","err"); return; }
+  if (!text && !link) { toast("Ajoutez votre réponse ou une photo.","err"); return; }
+  if (!db)      { toast("Connexion Firebase non disponible.","err"); return; }
+  try {
+    await db.collection("submissions").add({
+      classId: currentClass, name, subject, text, link,
+      status: "en attente", correction: "",
+      date: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.getElementById("rendu-name").value = "";
+    document.getElementById("rendu-subject").value = "";
+    document.getElementById("rendu-text").value = "";
+    document.getElementById("rendu-link").value = "";
+    toast("Devoir envoyé avec succès !", "ok");
+    loadRenduHistory();
+  } catch(e) { toast("Erreur d'envoi.","err"); console.error(e); }
+}
+
+async function loadRenduHistory() {
+  const el = document.getElementById("s-rendu-history");
+  if (!el || !db) return;
+  try {
+    const snap = await db.collection("submissions")
+      .where("classId","==",currentClass).get();
+    const arr = [];
+    snap.forEach(d => arr.push({ id:d.id, ...d.data() }));
+    arr.sort((a,b) => (b.date?.seconds||0) - (a.date?.seconds||0));
+    if (arr.length === 0) { el.innerHTML = ""; return; }
+    el.innerHTML = "<p style='font-size:12px;font-weight:700;color:#5a6a80;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;'>Vos devoirs envoyés</p>";
+    arr.forEach(d => {
+      const dt = d.date ? new Date(d.date.toDate()).toLocaleDateString("fr-FR",{day:"numeric",month:"short"}) : "";
+      const corrHtml = d.correction ? `<div style="margin-top:8px;padding:8px;background:#eafdf4;border-radius:8px;border-left:3px solid #27ae60;font-size:13px;color:#27ae60;"><strong>Correction :</strong> ${esc(d.correction)}</div>` : "";
+      const linkHtml = d.link ? `<a href="${d.link}" target="_blank" style="font-size:12px;color:#2980b9;">📷 Voir photo</a>` : "";
+      const badge = d.status === "corrigé"
+        ? `<span style="background:#eafdf4;color:#27ae60;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;">✅ Corrigé</span>`
+        : `<span style="background:#fff3cd;color:#856404;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;">⏳ En attente</span>`;
+      el.insertAdjacentHTML("beforeend", `
+        <div style="background:#fff;border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:0 2px 8px rgba(27,42,74,.08);border-left:4px solid #C9A84C;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+            <strong style="font-size:14px;color:#1B2A4A;">${esc(d.subject)}</strong>${badge}
+          </div>
+          ${d.text ? `<div style="font-size:13px;color:#5a6a80;margin-bottom:4px;">${esc(d.text)}</div>` : ""}
+          ${linkHtml}
+          <div style="font-size:11px;color:#9aaab8;margin-top:6px;">${dt}</div>
+          ${corrHtml}
+        </div>`);
+    });
+  } catch(e) { console.warn(e); }
+}
+
+// ═══════════════════════════════════════════════════════
+//  MANUELS
+// ═══════════════════════════════════════════════════════
+async function loadStudentManuals() {
+  const el = document.getElementById("s-manuals-list");
+  if (!el) return;
+  if (!db) { el.innerHTML = empty("📖","Manuels non disponibles"); return; }
+  el.innerHTML = loader();
+  try {
+    const snap = await db.collection("manuals").orderBy("date","desc").get();
+    if (snap.empty) { el.innerHTML = empty("📖","Aucun manuel disponible pour le moment"); return; }
+    const classLevel = { classe3:"1AS", classe4:"2AS", classe5:"3AS", classe6:"4AS" }[currentClass] || "";
+    el.innerHTML = "<p style='font-size:12px;font-weight:700;color:#5a6a80;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;'>Manuels de Mathématiques</p>";
+    let count = 0;
+    snap.forEach(d => {
+      const m = d.data();
+      if (m.level !== classLevel && m.level !== "tous") return;
+      count++;
+      el.insertAdjacentHTML("beforeend", `
+        <div style="background:#fff;border-radius:14px;padding:16px 18px;margin-bottom:12px;box-shadow:0 2px 8px rgba(27,42,74,.08);border-left:4px solid #C9A84C;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+            <span style="font-size:24px;">📖</span>
+            <div>
+              <div style="font-family:Playfair Display,serif;font-size:15px;color:#1B2A4A;font-weight:600;">${esc(m.title)}</div>
+              ${m.desc ? `<div style="font-size:12px;color:#5a6a80;">${esc(m.desc)}</div>` : ""}
+            </div>
+          </div>
+          <a href="${m.link}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;background:#1B2A4A;color:#C9A84C;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;margin-top:6px;">
+            ⬇️ Télécharger le PDF
+          </a>
+        </div>`);
+    });
+    if (count === 0) el.innerHTML = empty("📖","Aucun manuel pour votre niveau");
+  } catch(e) { el.innerHTML = empty("⚠️","Erreur de chargement"); console.error(e); }
+}
+
+async function pubManual() {
+  const level = document.getElementById("manual-level").value;
+  const title = document.getElementById("manual-title").value.trim();
+  const link  = document.getElementById("manual-link").value.trim();
+  const desc  = document.getElementById("manual-desc").value.trim();
+  if (!title) { toast("Le titre est obligatoire.","err"); return; }
+  if (!link)  { toast("Le lien PDF est obligatoire.","err"); return; }
+  if (!db)    { toast("Firebase non disponible.","err"); return; }
+  try {
+    await db.collection("manuals").add({ level, title, link, desc, date: firebase.firestore.FieldValue.serverTimestamp() });
+    document.getElementById("manual-title").value = "";
+    document.getElementById("manual-link").value = "";
+    document.getElementById("manual-desc").value = "";
+    toast("Manuel ajouté !", "ok");
+  } catch(e) { toast("Erreur.","err"); }
+}
+
+// ═══════════════════════════════════════════════════════
+//  ADMIN — RENDUS
+// ═══════════════════════════════════════════════════════
+async function loadAdminRendus() {
+  const el = document.getElementById("a-rendus-list");
+  if (!el || !db) { if(el) el.innerHTML = empty("📤","Firebase non disponible"); return; }
+  el.innerHTML = loader();
+  try {
+    const snap = await db.collection("submissions").get();
+    const arr = [];
+    snap.forEach(d => arr.push({ id:d.id, ...d.data() }));
+    arr.sort((a,b) => (b.date?.seconds||0) - (a.date?.seconds||0));
+    if (arr.length === 0) { el.innerHTML = empty("📤","Aucun devoir rendu"); return; }
+    el.innerHTML = "";
+    arr.forEach(d => {
+      const dt = d.date ? new Date(d.date.toDate()).toLocaleDateString("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}) : "";
+      const clsName = CLASS_NAMES[d.classId] || d.classId;
+      const badge = d.status === "corrigé"
+        ? `<span style="background:#eafdf4;color:#27ae60;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;">✅ Corrigé</span>`
+        : `<span style="background:#fff3cd;color:#856404;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;">⏳ En attente</span>`;
+      const linkHtml = d.link ? `<a href="${d.link}" target="_blank" style="font-size:12px;color:#2980b9;display:block;margin-top:4px;">📷 Voir photo</a>` : "";
+      el.insertAdjacentHTML("beforeend", `
+        <div style="background:#fff;border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 2px 8px rgba(27,42,74,.08);border-left:4px solid #C9A84C;" id="rendu-${d.id}">
+          <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
+            <div>
+              <strong style="color:#1B2A4A;">${esc(d.name)}</strong>
+              <span style="font-size:12px;color:#5a6a80;margin-left:8px;">${clsName}</span>
+            </div>
+            ${badge}
+          </div>
+          <div style="font-size:13px;font-weight:600;color:#C9A84C;margin-bottom:4px;">${esc(d.subject)}</div>
+          ${d.text ? `<div style="font-size:13px;color:#5a6a80;margin-bottom:4px;">${esc(d.text)}</div>` : ""}
+          ${linkHtml}
+          <div style="font-size:11px;color:#9aaab8;margin-bottom:10px;">${dt}</div>
+          <textarea id="corr-${d.id}" placeholder="Écrire la correction..." style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:8px;font-family:DM Sans,sans-serif;font-size:13px;resize:none;height:60px;outline:none;margin-bottom:8px;">${d.correction||""}</textarea>
+          <button onclick="saveCorrection('${d.id}')" style="background:#1B2A4A;color:#C9A84C;border:none;border-radius:8px;padding:8px 16px;font-family:DM Sans,sans-serif;font-size:13px;font-weight:600;cursor:pointer;">💾 Enregistrer la correction</button>
+        </div>`);
+    });
+  } catch(e) { el.innerHTML = empty("⚠️","Erreur de chargement"); console.error(e); }
+}
+
+async function saveCorrection(id) {
+  const correction = document.getElementById("corr-"+id)?.value.trim() || "";
+  if (!db) return;
+  try {
+    await db.collection("submissions").doc(id).update({ correction, status: correction ? "corrigé" : "en attente" });
+    toast("Correction enregistrée !", "ok");
+    loadAdminRendus();
+  } catch(e) { toast("Erreur.","err"); }
+}
+
+// ═══════════════════════════════════════════════════════
+//  LISTE DES ÉLÈVES
+// ═══════════════════════════════════════════════════════
+async function loadAllStudentLists() {
+  for (const cid of ["classe3","classe4","classe5","classe6"]) {
+    await loadStudentList(cid);
+  }
+}
+
+async function loadStudentList(cid) {
+  const el = document.getElementById("table-"+cid);
+  const countEl = document.getElementById("count-"+cid);
+  if (!el || !db) return;
+  try {
+    const snap = await db.collection("students").where("classId","==",cid).orderBy("num","asc").get();
+    const arr = [];
+    snap.forEach(d => arr.push({ id:d.id, ...d.data() }));
+    if (countEl) countEl.textContent = arr.length + " élève(s)";
+    if (arr.length === 0) {
+      el.innerHTML = "<p style='font-size:13px;color:#9aaab8;padding:12px 0;text-align:center;'>Aucun élève enregistré</p>";
+      return;
+    }
+    el.innerHTML = `<table class="student-table">
+      <thead><tr>
+        <th>N°</th><th>Nom / Prénom</th><th>Date entrée / Paiement</th><th>Code classe</th><th>Code personnel</th><th></th>
+      </tr></thead>
+      <tbody>${arr.map((s,i) => `
+        <tr>
+          <td style="font-weight:700;color:#1B2A4A;">${i+1}</td>
+          <td style="font-weight:600;">${esc(s.name)}</td>
+          <td style="color:#5a6a80;">${s.date||"—"}</td>
+          <td><span class="code-pill" style="background:#e8f3fd;color:#2980b9;">${codes[cid]||""}</span></td>
+          <td><span class="code-pill">${esc(s.code||"—")}</span></td>
+          <td><button class="btn-del-student" onclick="deleteStudent('${s.id}','${cid}')">✕</button></td>
+        </tr>`).join("")}
+      </tbody>
+    </table>`;
+  } catch(e) {
+    // fallback without orderBy
+    try {
+      const snap = await db.collection("students").where("classId","==",cid).get();
+      const arr = [];
+      snap.forEach(d => arr.push({ id:d.id, ...d.data() }));
+      arr.sort((a,b) => (a.num||0)-(b.num||0));
+      if (countEl) countEl.textContent = arr.length + " élève(s)";
+      if (arr.length === 0) { el.innerHTML = "<p style='font-size:13px;color:#9aaab8;padding:12px 0;text-align:center;'>Aucun élève enregistré</p>"; return; }
+      el.innerHTML = `<table class="student-table"><thead><tr><th>N°</th><th>Nom / Prénom</th><th>Date entrée / Paiement</th><th>Code classe</th><th>Code personnel</th><th></th></tr></thead>
+        <tbody>${arr.map((s,i) => `<tr><td style="font-weight:700;color:#1B2A4A;">${i+1}</td><td style="font-weight:600;">${esc(s.name)}</td><td style="color:#5a6a80;">${s.date||"—"}</td><td><span class="code-pill" style="background:#e8f3fd;color:#2980b9;">${codes[cid]||""}</span></td><td><span class="code-pill">${esc(s.code||"—")}</span></td><td><button class="btn-del-student" onclick="deleteStudent('${s.id}','${cid}')">✕</button></td></tr>`).join("")}</tbody></table>`;
+    } catch(e2) { el.innerHTML = "<p style='color:#e74c3c;font-size:13px;'>Erreur de chargement</p>"; }
+  }
+}
+
+async function addStudent() {
+  const cid   = document.getElementById("new-student-class").value;
+  const name  = document.getElementById("new-student-name").value.trim();
+  const date  = document.getElementById("new-student-date").value;
+  const code  = document.getElementById("new-student-code").value.trim().toUpperCase();
+  if (!name) { toast("Entrez le nom de l'élève.","err"); return; }
+  if (!db)   { toast("Firebase non disponible.","err"); return; }
+  try {
+    // Get current count for num
+    const snap = await db.collection("students").where("classId","==",cid).get();
+    const num  = snap.size + 1;
+    await db.collection("students").add({
+      classId: cid, name, date, code, num,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.getElementById("new-student-name").value = "";
+    document.getElementById("new-student-code").value = "";
+    document.getElementById("new-student-date").value = "";
+    toast("Élève ajouté !", "ok");
+    loadStudentList(cid);
+  } catch(e) { toast("Erreur d'ajout.","err"); console.error(e); }
+}
+
+async function deleteStudent(id, cid) {
+  if (!confirm("Supprimer cet élève ?")) return;
+  try {
+    await db.collection("students").doc(id).delete();
+    toast("Élève supprimé.");
+    loadStudentList(cid);
+  } catch(e) { toast("Erreur.","err"); }
+}
+
+// ═══════════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════════
+// ═══ CLOUDINARY UPLOAD ═══
+async function uploadCloudinary(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', 'les-elites');
+  const type = file.type.startsWith('image/') ? 'image' : 'raw';
+  toast("⏳ Upload en cours...","");
+  try {
+    const res = await fetch(
+      https://api.cloudinary.com/v1_1/dvhrdgxnf/${type}/upload,
+      { method:'POST', body:formData }
+    );
+    const data = await res.json();
+    if (data.secure_url) {
+      toast("✅ Fichier uploadé !","ok");
+      return data.secure_url;
+    } else { toast("Erreur upload","err"); return null; }
+  } catch(e) { toast("Erreur réseau","err"); return null; }
+}
+
+function showImgModal(url) {
+  let m = document.getElementById('img-modal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'img-modal';
+    m.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;align-items:center;justify-content:center;cursor:zoom-out';
+    m.innerHTML = '<img id="img-modal-src" style="max-width:95vw;max-height:95vh;border-radius:10px">';
+    m.onclick = () => m.style.display = 'none';
+    document.body.appendChild(m);
+  }
+  document.getElementById('img-modal-src').src = url;
+  m.style.display = 'flex';
+}
+
+async function handleManualFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const url = await uploadCloudinary(file);
+  if (url) document.getElementById('manual-link').value = url;
+}
+bootFirebase();
+</script>
+</body>
+</html>
