@@ -1264,8 +1264,8 @@ async function loadStudentManuals() {
               ${m.desc ? `<div style="font-size:12px;color:#5a6a80;">${esc(m.desc)}</div>` : ""}
             </div>
           </div>
-          <a href="${m.link}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;background:#1B2A4A;color:#C9A84C;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;margin-top:6px;">
-            ⬇️ Télécharger le PDF
+          <a href="${m.link}" onclick="if(this.href.indexOf('/image/')>-1){event.preventDefault();showImgModal(this.href);}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;background:#1B2A4A;color:#C9A84C;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;margin-top:6px;">
+            ⬇️ 
           </a>
         </div>`);
     });
