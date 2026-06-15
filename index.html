@@ -1437,7 +1437,7 @@ async function uploadCloudinary(file) {
   toast("⏳ Upload en cours...","");
   try {
     const res = await fetch(
-      https://api.cloudinary.com/v1_1/dvhrdgxnf/${type}/upload,
+      'https://api.cloudinary.com/v1_1/dvhrdgxnf/' + type + '/upload',
       { method:'POST', body:formData }
     );
     const data = await res.json();
